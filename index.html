@@ -152,6 +152,24 @@
   .chip:active{transform:scale(.92);}
   .chip.active{border-color:transparent;color:#fff;background:var(--grad);box-shadow:0 3px 0 #4B22A8;transform:translateY(-1px);}
   .chip:hover:not(.active){border-color:var(--muted-dim);color:var(--text);}
+  .brands-row{display:none;padding:2px 18px 4px;}
+  .brands-row.show{display:block;animation:brandsIn .35s var(--ease);}
+  @keyframes brandsIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
+  .brands{display:flex;gap:7px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 0 4px;}
+  .brands::-webkit-scrollbar{display:none;}
+  .brand-chip{
+    flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--line);background:transparent;color:var(--muted);
+    border-radius:999px;padding:6px 6px 6px 13px;font-family:var(--font-heading);font-weight:700;font-size:11px;letter-spacing:.04em;
+    cursor:pointer;scroll-snap-align:start;transition:all .2s var(--ease);
+  }
+  .brand-chip b{min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--bg-elev);color:var(--muted);font-size:10px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
+  .brand-chip:active{transform:scale(.93);}
+  .brand-chip:hover:not(.active){border-color:var(--muted-dim);color:var(--text);}
+  .brand-chip.active{border-color:var(--accent-2);color:var(--accent-2);background:var(--pink-dim);}
+  .brand-chip.active b{background:var(--accent-2);color:#fff;}
+  .card-brand{margin-top:11px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-2);font-weight:800;line-height:1;}
+  .card-brand + .card-name{margin-top:4px;}
+  .pd-brand{color:var(--text);}
   .sort-wrap{position:relative;flex:0 0 auto;}
   .sort-btn{width:40px;height:38px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg-elev);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s var(--ease);}
   .sort-btn:active{transform:scale(.9);}
@@ -459,6 +477,8 @@
       </div>
     </div>
   </div>
+
+  <div class="brands-row" id="brandsRow"><div class="brands" id="brands"></div></div>
   <div id="gridWrap">
     <div class="skeleton-grid" id="skeletonGrid"></div>
     <div class="grid" id="grid" style="display:none;"></div>
@@ -691,6 +711,7 @@ let cart = [];
 let appliedPromo = null; // { code, type, value }
 let promoFormOpen = false;
 let activeCategory = 'Все';
+let activeBrand = 'Все';
 let currentProduct = null;
 let sortMode = 'default';
 
@@ -784,19 +805,59 @@ function renderTicker(){
   t.innerHTML = `<div class="ticker-half">${row}</div><div class="ticker-half">${row}</div>`;
 }
 
+function escHtml(s){
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderFilters(){
   const cats = ['Все', ...new Set(PRODUCTS.map(p => p.category))];
-  filtersEl.innerHTML = cats.map(c =>
-    `<button class="chip ${c===activeCategory?'active':''}" data-cat="${c}">${c}</button>`
+  if (!cats.includes(activeCategory)) { activeCategory = 'Все'; activeBrand = 'Все'; }
+  filtersEl.innerHTML = cats.map((c, ci) =>
+    `<button class="chip ${c===activeCategory?'active':''}" data-ci="${ci}">${escHtml(c)}</button>`
   ).join('');
   filtersEl.querySelectorAll('.chip').forEach(btn=>{
     btn.onclick = () => {
-      if (btn.dataset.cat === activeCategory) return;
-      activeCategory = btn.dataset.cat;
+      const c = cats[Number(btn.dataset.ci)];
+      if (c === activeCategory) return;
+      activeCategory = c;
+      activeBrand = 'Все';
       renderFilters();
       renderGrid();
     };
   });
+  renderBrands();
+}
+
+// Второй ряд фильтров: бренды внутри выбранной категории (показывается, если брендов ≥ 2)
+function renderBrands(){
+  const row = document.getElementById('brandsRow');
+  const box = document.getElementById('brands');
+  const inCat = activeCategory === 'Все' ? [] : PRODUCTS.filter(p => p.category === activeCategory);
+  const counts = new Map();
+  inCat.forEach(p => { if (p.brand) counts.set(p.brand, (counts.get(p.brand) || 0) + 1); });
+  if (counts.size < 2) {
+    row.classList.remove('show');
+    box.innerHTML = '';
+    activeBrand = 'Все';
+    return;
+  }
+  const brands = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru')).map(e => e[0]);
+  if (activeBrand !== 'Все' && !counts.has(activeBrand)) activeBrand = 'Все';
+  const all = ['Все', ...brands];
+  box.innerHTML = all.map((b, bi) => {
+    const n = b === 'Все' ? inCat.length : counts.get(b);
+    return `<button class="brand-chip ${b===activeBrand?'active':''}" data-bi="${bi}">${b==='Все' ? 'Все бренды' : escHtml(b)}<b>${n}</b></button>`;
+  }).join('');
+  box.querySelectorAll('.brand-chip').forEach(btn => {
+    btn.onclick = () => {
+      const b = all[Number(btn.dataset.bi)];
+      if (b === activeBrand) return;
+      activeBrand = b;
+      renderBrands();
+      renderGrid();
+    };
+  });
+  row.classList.add('show');
 }
 
 const emptyStateHTML = `
@@ -827,6 +888,7 @@ function cardHTML(p, i){
         ` : ''}
         <div class="card-label">${p.category}</div>
       </div>
+      ${p.brand ? `<div class="card-brand">${escHtml(p.brand)}</div>` : ''}
       <div class="card-name">${p.name}</div>
       <div class="card-price">${priceHTML(p)}</div>
     </div>
@@ -887,7 +949,7 @@ sortMenu.querySelectorAll('.sort-opt').forEach(opt=>{
 });
 
 function renderGrid(){
-  let list = activeCategory==='Все' ? PRODUCTS : PRODUCTS.filter(p=>p.category===activeCategory);
+  let list = activeCategory==='Все' ? PRODUCTS : PRODUCTS.filter(p => p.category===activeCategory && (activeBrand==='Все' || p.brand===activeBrand));
   list = applySort(list);
   grid.style.opacity = '0';
   grid.style.transform = 'translateY(6px)';
@@ -1003,7 +1065,7 @@ function openProduct(id){
   currentProduct = PRODUCTS.find(p=>p.id===id);
   const p = currentProduct;
   renderGallery(p);
-  document.getElementById('pdCat').textContent = p.category;
+  document.getElementById('pdCat').innerHTML = escHtml(p.category) + (p.brand ? ` <span class="pd-brand">› ${escHtml(p.brand)}</span>` : '');
   const pdBadge = document.getElementById('pdBadge');
   if (p.badge && BADGE_LABELS[p.badge]){
     pdBadge.textContent = BADGE_LABELS[p.badge];
@@ -1615,8 +1677,8 @@ fetch('/api/config').then(r => r.ok ? r.json() : null).then(c => {
   document.getElementById('ageNo').onclick = () => gate.classList.add('denied');
 })();
 
-fetch('products.json').then(r=>r.json()).then(data=>{
-  PRODUCTS = data;
+fetch('products.json', {cache:'no-store'}).then(r=>r.json()).then(data=>{
+  PRODUCTS = data.filter(p => !p.hidden);
   renderTicker();
   renderFilters();
   renderGrid();

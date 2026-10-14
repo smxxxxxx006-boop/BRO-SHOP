@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "ELFBAR ELFX 30W",
-    "category": "Elf Bar",
+    "category": "Девайсы",
     "price": 990,
     "old_price": 1290,
     "badge": "sale",
@@ -14,12 +14,13 @@
     ],
     "swatch": 0,
     "desc": "Elf Bar ELFBAR ELFX 30W. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Elf Bar"
   },
   {
     "id": 2,
     "name": "ELFBAR ELFX PRO 45W",
-    "category": "Elf Bar",
+    "category": "Девайсы",
     "price": 1390,
     "old_price": 1790,
     "badge": "sale",
@@ -31,12 +32,13 @@
     ],
     "swatch": 1,
     "desc": "Elf Bar ELFBAR ELFX PRO 45W. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Elf Bar"
   },
   {
     "id": 3,
     "name": "AEGIS BOOST B100 (BOOST PRO 2)",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2890,
     "old_price": 3090,
     "badge": null,
@@ -52,12 +54,13 @@
     ],
     "swatch": 2,
     "desc": "Geek Vape AEGIS BOOST B100 (BOOST PRO 2). Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 4,
     "name": "AEGIS MINI 5 KIT 100W",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 4150,
     "old_price": 4390,
     "badge": null,
@@ -67,12 +70,13 @@
     ],
     "swatch": 3,
     "desc": "Geek Vape AEGIS MINI 5 KIT 100W. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 5,
     "name": "AEGIS BOOST 3",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2850,
     "old_price": 2990,
     "badge": null,
@@ -88,12 +92,13 @@
     ],
     "swatch": 4,
     "desc": "Geek Vape AEGIS BOOST 3. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 6,
     "name": "AEGIS HERO 3 (H45 CLASSIC)",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2490,
     "old_price": 2650,
     "badge": null,
@@ -107,12 +112,13 @@
     ],
     "swatch": 5,
     "desc": "Geek Vape AEGIS HERO 3 (H45 CLASSIC). Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 7,
     "name": "AEGIS HERO 5",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2650,
     "old_price": 2890,
     "badge": null,
@@ -133,12 +139,13 @@
     ],
     "swatch": 0,
     "desc": "Geek Vape AEGIS HERO 5. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 8,
     "name": "AEGIS HERO 2 — НОВЫЕ ЦВЕТА",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2490,
     "old_price": 2650,
     "badge": null,
@@ -149,12 +156,13 @@
     ],
     "swatch": 1,
     "desc": "Geek Vape AEGIS HERO 2 — НОВЫЕ ЦВЕТА. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 9,
     "name": "AEGIS HERO 2 CRYSTAL",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2650,
     "old_price": 2890,
     "badge": null,
@@ -165,12 +173,13 @@
     ],
     "swatch": 2,
     "desc": "Geek Vape AEGIS HERO 2 CRYSTAL. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 10,
     "name": "AEGIS BOOST LE",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 1990,
     "old_price": 2190,
     "badge": null,
@@ -181,12 +190,13 @@
     ],
     "swatch": 3,
     "desc": "Geek Vape AEGIS BOOST LE. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении. В комплекте 5 испарителей.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 11,
     "name": "Z FLI TANK 2",
-    "category": "Geek Vape",
+    "category": "Девайсы",
     "price": 2290,
     "old_price": 2490,
     "badge": null,
@@ -195,12 +205,13 @@
     ],
     "swatch": 4,
     "desc": "Geek Vape Z FLI TANK 2. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении. Новый «Зевс», работает на испарителях.",
-    "images": []
+    "images": [],
+    "brand": "Geek Vape"
   },
   {
     "id": 12,
     "name": "XROS 6",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 2590,
     "old_price": 2790,
     "badge": null,
@@ -214,12 +225,13 @@
     ],
     "swatch": 5,
     "desc": "Vaporesso XROS 6. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 13,
     "name": "XROS 6 MINI",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 1900,
     "old_price": null,
     "badge": null,
@@ -234,12 +246,13 @@
     ],
     "swatch": 0,
     "desc": "Vaporesso XROS 6 MINI. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 14,
     "name": "XROS PRO 2",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 2590,
     "old_price": 2790,
     "badge": null,
@@ -250,12 +263,13 @@
     ],
     "swatch": 1,
     "desc": "Vaporesso XROS PRO 2. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 15,
     "name": "XROS MINI",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 1190,
     "old_price": 1350,
     "badge": "sale",
@@ -286,12 +300,13 @@
     ],
     "swatch": 2,
     "desc": "Vaporesso XROS MINI. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 16,
     "name": "XROS 4 MINI",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 1490,
     "old_price": 1690,
     "badge": "sale",
@@ -309,12 +324,13 @@
     ],
     "swatch": 3,
     "desc": "Vaporesso XROS 4 MINI. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 17,
     "name": "XROS 5 MINI",
-    "category": "Vaporesso",
+    "category": "Девайсы",
     "price": 1790,
     "old_price": 1990,
     "badge": "sale",
@@ -334,12 +350,13 @@
     ],
     "swatch": 4,
     "desc": "Vaporesso XROS 5 MINI. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Vaporesso"
   },
   {
     "id": 18,
     "name": "CHARON MYSTERY BOX",
-    "category": "Smoant",
+    "category": "Девайсы",
     "price": 1090,
     "old_price": 1190,
     "badge": null,
@@ -348,12 +365,13 @@
     ],
     "swatch": 5,
     "desc": "Smoant CHARON MYSTERY BOX. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении. Сюрприз: цвет определяется случайно.",
-    "images": []
+    "images": [],
+    "brand": "Smoant"
   },
   {
     "id": 19,
     "name": "KNIGHT AIO 90W",
-    "category": "Smoant",
+    "category": "Девайсы",
     "price": 2890,
     "old_price": 3000,
     "badge": null,
@@ -367,12 +385,13 @@
     ],
     "swatch": 0,
     "desc": "Smoant KNIGHT AIO 90W. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Smoant"
   },
   {
     "id": 20,
     "name": "PASITO 3",
-    "category": "Smoant",
+    "category": "Девайсы",
     "price": 3350,
     "old_price": 3590,
     "badge": null,
@@ -388,12 +407,13 @@
     ],
     "swatch": 1,
     "desc": "Smoant PASITO 3. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Smoant"
   },
   {
     "id": 21,
     "name": "PASITO 2",
-    "category": "Smoant",
+    "category": "Девайсы",
     "price": 2690,
     "old_price": 2850,
     "badge": null,
@@ -414,12 +434,13 @@
     ],
     "swatch": 2,
     "desc": "Smoant PASITO 2. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Smoant"
   },
   {
     "id": 22,
     "name": "KNIGHT 80",
-    "category": "Smoant",
+    "category": "Девайсы",
     "price": 2950,
     "old_price": 3100,
     "badge": null,
@@ -430,12 +451,13 @@
     ],
     "swatch": 3,
     "desc": "Smoant KNIGHT 80. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Smoant"
   },
   {
     "id": 23,
     "name": "DRAG 6",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 4490,
     "old_price": 4850,
     "badge": null,
@@ -445,12 +467,13 @@
     ],
     "swatch": 4,
     "desc": "Voopoo DRAG 6. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 24,
     "name": "DRAG S3",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 2990,
     "old_price": 3190,
     "badge": null,
@@ -461,12 +484,13 @@
     ],
     "swatch": 5,
     "desc": "Voopoo DRAG S3. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 25,
     "name": "DRAG X3",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 2750,
     "old_price": 2890,
     "badge": null,
@@ -476,12 +500,13 @@
     ],
     "swatch": 0,
     "desc": "Voopoo DRAG X3. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 26,
     "name": "DRAG E60",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 2190,
     "old_price": 2390,
     "badge": null,
@@ -493,12 +518,13 @@
     ],
     "swatch": 1,
     "desc": "Voopoo DRAG E60. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 27,
     "name": "VMATE MINI",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 1090,
     "old_price": 1190,
     "badge": null,
@@ -513,12 +539,13 @@
     ],
     "swatch": 2,
     "desc": "Voopoo VMATE MINI. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 28,
     "name": "VMATE PRO",
-    "category": "Voopoo",
+    "category": "Девайсы",
     "price": 1950,
     "old_price": 2090,
     "badge": null,
@@ -529,12 +556,13 @@
     ],
     "swatch": 3,
     "desc": "Voopoo VMATE PRO. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Voopoo"
   },
   {
     "id": 29,
     "name": "THELEMA SOLO 100W",
-    "category": "Lost Vape",
+    "category": "Девайсы",
     "price": 3750,
     "old_price": null,
     "badge": null,
@@ -543,12 +571,13 @@
     ],
     "swatch": 4,
     "desc": "Lost Vape THELEMA SOLO 100W. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Lost Vape"
   },
   {
     "id": 30,
     "name": "CENTAURUS M200 KIT",
-    "category": "Lost Vape",
+    "category": "Девайсы",
     "price": 4590,
     "old_price": null,
     "badge": null,
@@ -558,12 +587,13 @@
     ],
     "swatch": 5,
     "desc": "Lost Vape CENTAURUS M200 KIT. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Lost Vape"
   },
   {
     "id": 31,
     "name": "THELEMA Q200 PRO",
-    "category": "Lost Vape",
+    "category": "Девайсы",
     "price": 4290,
     "old_price": null,
     "badge": null,
@@ -572,12 +602,13 @@
     ],
     "swatch": 0,
     "desc": "Lost Vape THELEMA Q200 PRO. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Lost Vape"
   },
   {
     "id": 32,
     "name": "GALAXY S360",
-    "category": "Lost Vape",
+    "category": "Девайсы",
     "price": 1290,
     "old_price": 1490,
     "badge": "sale",
@@ -587,12 +618,13 @@
     ],
     "swatch": 1,
     "desc": "Lost Vape GALAXY S360. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Lost Vape"
   },
   {
     "id": 33,
     "name": "MANTO AIO BABY",
-    "category": "Rincoe",
+    "category": "Девайсы",
     "price": 2990,
     "old_price": 3150,
     "badge": null,
@@ -602,7 +634,8 @@
     ],
     "swatch": 2,
     "desc": "Rincoe MANTO AIO BABY. Оригинал, гарантия на покупку. Выберите цвет — менеджер подтвердит наличие при оформлении.",
-    "images": []
+    "images": [],
+    "brand": "Rincoe"
   },
   {
     "id": 34,
@@ -616,7 +649,8 @@
     ],
     "swatch": 3,
     "desc": "Аккумулятор 18650. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   },
   {
     "id": 35,
@@ -630,7 +664,8 @@
     ],
     "swatch": 4,
     "desc": "Аккумулятор 18650. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   },
   {
     "id": 36,
@@ -644,7 +679,8 @@
     ],
     "swatch": 5,
     "desc": "Аккумулятор 18650. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   },
   {
     "id": 37,
@@ -658,7 +694,8 @@
     ],
     "swatch": 0,
     "desc": "Аккумулятор 18650. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   },
   {
     "id": 38,
@@ -676,7 +713,8 @@
     ],
     "swatch": 1,
     "desc": "Сменные панели для Smoant Charon Plus. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   },
   {
     "id": 39,
@@ -691,6 +729,7 @@
     ],
     "swatch": 2,
     "desc": "Сменные двери для DotAIO, DoVpo и BP Mods. Оригинал, гарантия на покупку.",
-    "images": []
+    "images": [],
+    "brand": ""
   }
 ]

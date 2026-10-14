@@ -2,9 +2,14 @@ import os
 import json
 import uuid
 import logging
+import time
+import mimetypes
+import hmac
+import hashlib
+from urllib.parse import parse_qsl, urlencode
 from datetime import datetime, timezone
 
-from flask import Flask, request, send_from_directory, abort, jsonify
+from flask import Flask, request, send_from_directory, abort, jsonify, Response
 import telebot
 from telebot import types
 
@@ -34,6 +39,15 @@ ADMIN_CHAT_IDS = {
     if x.strip().lstrip("-").isdigit()
 }
 
+# Строка подключения к Neon (Postgres), например:
+# postgresql://user:password@ep-xxx.eu-central-1.aws.neon.tech/neondb?sslmode=require
+# Если не задана — проект работает по-старому, на JSON-файлах (удобно для локального запуска).
+DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
+USE_DB = bool(DATABASE_URL)
+if USE_DB:
+    import psycopg2
+    from psycopg2.extras import Json
+
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PRODUCTS_FILE = os.path.join(APP_DIR, "products.json")
 ORDERS_FILE = os.path.join(APP_DIR, "orders.json")
@@ -45,6 +59,10 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 ALLOWED_BADGES = {"hit", "trend", "sale", "instock"}
 ALLOWED_PROMO_TYPES = {"percent", "fixed"}
+# Способ получения заказа (необязательное поле, фронтенд может его присылать).
+DELIVERY_LABELS = {"pickup": "Самовывоз", "delivery": "Доставка"}
+# Сколько секунд считаем initData из Telegram WebApp свежей (7 суток).
+INIT_DATA_MAX_AGE = 7 * 24 * 3600
 
 bot = telebot.TeleBot(BOT_TOKEN, threaded=False)
 app = Flask(__name__)
@@ -61,56 +79,260 @@ def require_admin():
         abort(401, description="Неверный пароль")
 
 
-def load_products():
-    if not os.path.exists(PRODUCTS_FILE):
+# --- Хранилище: Neon (Postgres) либо JSON-файлы ---------------------------
+
+FILES = {
+    "products": PRODUCTS_FILE,
+    "orders": ORDERS_FILE,
+    "questions": QUESTIONS_FILE,
+    "promos": PROMOS_FILE,
+}
+
+
+def _file_load(table):
+    path = FILES[table]
+    if not os.path.exists(path):
         return []
-    with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _file_save(table, items):
+    with open(FILES[table], "w", encoding="utf-8") as f:
+        json.dump(items, f, ensure_ascii=False, indent=2)
+
+
+def db_connect():
+    """Подключение к Neon. Бесплатный Neon засыпает без трафика и просыпается
+    за пару секунд, поэтому пробуем несколько раз."""
+    last_err = None
+    for _ in range(4):
+        try:
+            return psycopg2.connect(DATABASE_URL, connect_timeout=15)
+        except psycopg2.OperationalError as e:
+            last_err = e
+            time.sleep(1.5)
+    raise last_err
+
+
+def _json(obj):
+    return Json(obj, dumps=lambda o: json.dumps(o, ensure_ascii=False))
+
+
+def init_db():
+    """Создаёт таблицы и один раз переносит в них данные из старых JSON-файлов
+    (products.json, orders.json, ...) и из папки uploads/."""
+    conn = db_connect()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                for table in FILES:
+                    cur.execute(
+                        f"CREATE TABLE IF NOT EXISTS {table} "
+                        "(id INTEGER PRIMARY KEY, data JSONB NOT NULL)"
+                    )
+                cur.execute(
+                    "CREATE TABLE IF NOT EXISTS uploads ("
+                    "filename TEXT PRIMARY KEY, content_type TEXT NOT NULL, "
+                    "data BYTEA NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())"
+                )
+                cur.execute(
+                    "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)"
+                )
+
+                # Защита от двойного запуска миграции при нескольких воркерах
+                cur.execute("SELECT pg_advisory_xact_lock(727001)")
+
+                for table in FILES:
+                    flag = f"seeded_{table}"
+                    cur.execute("SELECT 1 FROM meta WHERE key=%s", (flag,))
+                    if cur.fetchone():
+                        continue
+                    cur.execute(f"SELECT count(*) FROM {table}")
+                    if cur.fetchone()[0] == 0:
+                        for item in _file_load(table):
+                            cur.execute(
+                                f"INSERT INTO {table} (id, data) VALUES (%s, %s) "
+                                "ON CONFLICT (id) DO NOTHING",
+                                (int(item["id"]), _json(item)),
+                            )
+                        log.info("Таблица %s: перенесены данные из файла", table)
+                    cur.execute("INSERT INTO meta (key, value) VALUES (%s, '1')", (flag,))
+
+                cur.execute("SELECT 1 FROM meta WHERE key='seeded_uploads'")
+                if not cur.fetchone():
+                    if os.path.isdir(UPLOAD_DIR):
+                        for fn in os.listdir(UPLOAD_DIR):
+                            ext = os.path.splitext(fn)[1].lower()
+                            full = os.path.join(UPLOAD_DIR, fn)
+                            if ext in ALLOWED_IMAGE_EXT and os.path.isfile(full):
+                                with open(full, "rb") as fh:
+                                    cur.execute(
+                                        "INSERT INTO uploads (filename, content_type, data) "
+                                        "VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                                        (fn, image_content_type(fn), psycopg2.Binary(fh.read())),
+                                    )
+                    cur.execute("INSERT INTO meta (key, value) VALUES ('seeded_uploads', '1')")
+    finally:
+        conn.close()
+
+
+def _db_load(table):
+    conn = db_connect()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT data FROM {table} ORDER BY id")
+            return [row[0] for row in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def _db_save(table, items):
+    """Синхронизирует таблицу со списком items: меняются только изменённые
+    записи, удалённые — убираются."""
+    conn = db_connect()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(f"LOCK TABLE {table} IN EXCLUSIVE MODE")
+                cur.execute(f"SELECT id, data FROM {table}")
+                existing = {r[0]: r[1] for r in cur.fetchall()}
+                keep = set()
+                for item in items:
+                    iid = int(item["id"])
+                    keep.add(iid)
+                    if existing.get(iid) != item:
+                        cur.execute(
+                            f"INSERT INTO {table} (id, data) VALUES (%s, %s) "
+                            "ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data",
+                            (iid, _json(item)),
+                        )
+                for iid in set(existing) - keep:
+                    cur.execute(f"DELETE FROM {table} WHERE id = %s", (iid,))
+    finally:
+        conn.close()
+
+
+def _load(table):
+    return _db_load(table) if USE_DB else _file_load(table)
+
+
+def _save(table, items):
+    if USE_DB:
+        _db_save(table, items)
+    else:
+        _file_save(table, items)
+
+
+def load_products():
+    return _load("products")
 
 
 def save_products(items):
-    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False, indent=2)
+    _save("products", items)
 
 
 def load_orders():
-    if not os.path.exists(ORDERS_FILE):
-        return []
-    with open(ORDERS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return _load("orders")
 
 
 def save_orders(items):
-    with open(ORDERS_FILE, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False, indent=2)
+    _save("orders", items)
 
 
 def load_questions():
-    if not os.path.exists(QUESTIONS_FILE):
-        return []
-    with open(QUESTIONS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return _load("questions")
 
 
 def save_questions(items):
-    with open(QUESTIONS_FILE, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False, indent=2)
+    _save("questions", items)
 
 
 def load_promos():
-    if not os.path.exists(PROMOS_FILE):
-        return []
-    with open(PROMOS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    return _load("promos")
 
 
 def save_promos(items):
-    with open(PROMOS_FILE, "w", encoding="utf-8") as f:
-        json.dump(items, f, ensure_ascii=False, indent=2)
+    _save("promos", items)
+
+
+def image_content_type(filename):
+    ext = os.path.splitext(filename)[1].lower()
+    return {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+        ".webp": "image/webp", ".gif": "image/gif",
+    }.get(ext) or mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
 
 def fmt_price(n):
     return f"{int(n):,}".replace(",", " ") + " ₽"
+
+
+# --- Идентификация покупателя (CRM) ----------------------------------------
+
+def normalize_username(raw):
+    """'@Name ' -> 'name' (для поиска без учёта регистра и без @)."""
+    return str(raw or "").strip().lstrip("@").strip().lower()
+
+
+def clean_username(raw):
+    """Username для хранения: без @ и пробелов, регистр сохраняется."""
+    return str(raw or "").strip().lstrip("@").strip() or None
+
+
+def verify_init_data(init_data):
+    """Проверяет подпись Telegram WebApp initData (HMAC-SHA256 по токену бота).
+    Возвращает dict пользователя (id, username, ...) или None, если подпись
+    неверна / данные устарели. Это защищает от подмены Telegram ID в запросе."""
+    if not init_data or not isinstance(init_data, str):
+        return None
+    try:
+        pairs = dict(parse_qsl(init_data, keep_blank_values=True))
+    except ValueError:
+        return None
+    received_hash = pairs.pop("hash", None)
+    if not received_hash:
+        return None
+    check_string = "\n".join(f"{k}={pairs[k]}" for k in sorted(pairs))
+    secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
+    expected = hmac.new(secret, check_string.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, received_hash):
+        return None
+    try:
+        if time.time() - int(pairs.get("auth_date", "0")) > INIT_DATA_MAX_AGE:
+            return None
+        user = json.loads(pairs.get("user") or "null")
+    except (TypeError, ValueError):
+        return None
+    return user if isinstance(user, dict) and user.get("id") else None
+
+
+def extract_customer(data):
+    """Определяет покупателя из тела запроса: (telegram_id, username).
+    1) Если пришёл подписанный init_data — берём пользователя из него (надёжно).
+    2) Иначе — из tg_user (старый формат, как отправляет текущий index.html)."""
+    tg_user = verify_init_data(data.get("init_data")) or data.get("tg_user") or {}
+    if not isinstance(tg_user, dict):
+        tg_user = {}
+    try:
+        telegram_id = int(tg_user.get("id")) if tg_user.get("id") else None
+    except (TypeError, ValueError):
+        telegram_id = None
+    return telegram_id, clean_username(tg_user.get("username"))
+
+
+def order_telegram_id(order):
+    """Telegram ID покупателя заказа (новое поле, для старых заказов — прежнее)."""
+    return order.get("telegram_id") or order.get("customer_chat_id")
+
+
+def order_username(order):
+    return order.get("username") or order.get("customer_username")
+
+
+def sanitize_delivery_method(raw):
+    v = str(raw or "").strip().lower()
+    return v if v in DELIVERY_LABELS else None
 
 
 def sanitize_images(raw):
@@ -119,6 +341,11 @@ def sanitize_images(raw):
     if isinstance(raw, str) and raw.strip():
         return [raw.strip()]
     return []
+
+
+def sanitize_brand(raw):
+    """Бренд / подкатегория товара (необязательное поле)."""
+    return str(raw or "").strip()[:60]
 
 
 def sanitize_badge(raw):
@@ -267,7 +494,36 @@ def public_config():
 
 @app.route("/products.json", methods=["GET"])
 def products():
-    return send_from_directory(APP_DIR, "products.json")
+    """Публичный каталог: скрытые товары покупателям не отдаются."""
+    visible = [p for p in load_products() if not p.get("hidden")]
+    resp = jsonify(visible)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
+def build_admin_order_markup(admin_id, customer_id, customer_username):
+    """Inline-кнопка под уведомлением о заказе: открывает админку и сразу
+    запускает поиск истории заказов этого покупателя.
+    Приоритет — Telegram ID (он не меняется), иначе @username.
+    Возвращает None, если открывать нечего (нет BASE_URL или нет идентификатора)."""
+    if not BASE_URL:
+        return None
+    if customer_id:
+        search = str(customer_id)
+    elif customer_username:
+        search = "@" + customer_username
+    else:
+        return None
+    url = f"{BASE_URL}/admin?{urlencode({'customer': search})}"
+    markup = types.InlineKeyboardMarkup()
+    text = "🔍 Посмотреть историю заказов"
+    # web_app-кнопки Telegram допускает только в личных чатах (положительный ID);
+    # для групп/каналов отдаём обычную ссылку.
+    if admin_id > 0:
+        markup.add(types.InlineKeyboardButton(text=text, web_app=types.WebAppInfo(url=url)))
+    else:
+        markup.add(types.InlineKeyboardButton(text=text, url=url))
+    return markup
 
 
 @app.route("/api/order", methods=["POST"])
@@ -286,12 +542,10 @@ def create_order():
 
     subtotal = sum(int(i.get("price") or 0) * int(i.get("qty") or 1) for i in items)
 
-    tg_user = data.get("tg_user") or {}
-    try:
-        customer_chat_id = int(tg_user.get("id")) if tg_user.get("id") else None
-    except (TypeError, ValueError):
-        customer_chat_id = None
-    customer_username = (tg_user.get("username") or "").strip() or None
+    # Telegram ID и username фиксируем на сервере (из подписанного initData,
+    # а если его нет — из tg_user).
+    customer_chat_id, customer_username = extract_customer(data)
+    delivery_method = sanitize_delivery_method(data.get("delivery_method"))
 
     promo_code_raw = (data.get("promo_code") or "").strip()
     promo = None
@@ -318,6 +572,11 @@ def create_order():
         "discount": discount,
         "promo_code": promo.get("code") if promo else None,
         "total": total,
+        "delivery_method": delivery_method,
+        # CRM: идентификатор клиента
+        "telegram_id": customer_chat_id,
+        "username": customer_username,
+        # прежние поля оставлены — на них опираются index.html и admin.html
         "customer_chat_id": customer_chat_id,
         "customer_username": customer_username,
         "status": "new",
@@ -360,11 +619,14 @@ def create_order():
         except Exception as e:
             log.warning("Не удалось отправить подтверждение покупателю: %s", e)
 
+    buyer_id_label = str(customer_chat_id) if customer_chat_id else "ID не указан"
+    buyer_username_label = f"@{customer_username}" if customer_username else "Юзернейм не указан"
+
     admin_text = (
         f"🛒 Новый заказ BRO-{new_id}\n\n"
         f"Клиент: {name}\n"
         f"Телефон: {phone}\n"
-        + (f"Telegram: @{customer_username}\n" if customer_username else "")
+        f"Покупатель: {buyer_id_label} | {buyer_username_label}\n"
         + f"\n{items_lines}\n\n"
         f"{discount_line}"
         f"Итого: {fmt_price(total)}\n"
@@ -374,7 +636,16 @@ def create_order():
     )
     for admin_id in ADMIN_CHAT_IDS:
         try:
-            bot.send_message(admin_id, admin_text)
+            markup = build_admin_order_markup(admin_id, customer_chat_id, customer_username)
+            try:
+                bot.send_message(admin_id, admin_text, reply_markup=markup)
+            except Exception as e:
+                if markup is None:
+                    raise
+                # Кнопка не прошла (например, Telegram отклонил URL) —
+                # само уведомление о заказе всё равно должно дойти.
+                log.warning("Уведомление с кнопкой не отправилось (%s), шлю без кнопки", e)
+                bot.send_message(admin_id, admin_text)
         except Exception as e:
             log.warning("Не удалось уведомить администратора %s: %s", admin_id, e)
 
@@ -523,6 +794,18 @@ def create_question():
 
 @app.route("/uploads/<path:filename>", methods=["GET"])
 def uploaded_file(filename):
+    if USE_DB:
+        conn = db_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT content_type, data FROM uploads WHERE filename = %s", (filename,))
+                row = cur.fetchone()
+        finally:
+            conn.close()
+        if row:
+            resp = Response(bytes(row[1]), mimetype=row[0])
+            resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            return resp
     return send_from_directory(UPLOAD_DIR, filename)
 
 
@@ -533,7 +816,7 @@ def admin_page():
 
 @app.route("/healthz", methods=["GET"])
 def healthz():
-    return {"status": "ok"}
+    return {"status": "ok", "storage": "neon" if USE_DB else "files"}
 
 
 # --- Admin API -------------------------------------------------------
@@ -567,6 +850,7 @@ def admin_create_product():
         "id": new_id,
         "name": (data.get("name") or "").strip(),
         "category": (data.get("category") or "").strip(),
+        "brand": sanitize_brand(data.get("brand")),
         "price": price,
         "old_price": sanitize_old_price(data.get("old_price")),
         "badge": sanitize_badge(data.get("badge")),
@@ -575,6 +859,7 @@ def admin_create_product():
         "desc": (data.get("desc") or "").strip(),
         "images": images,
         "image": images[0] if images else None,
+        "hidden": bool(data.get("hidden", False)),
     }
     items.append(product)
     save_products(items)
@@ -592,6 +877,8 @@ def admin_update_product(pid):
                 p["name"] = (data.get("name") or "").strip()
             if "category" in data:
                 p["category"] = (data.get("category") or "").strip()
+            if "brand" in data:
+                p["brand"] = sanitize_brand(data.get("brand"))
             if "price" in data:
                 try:
                     p["price"] = int(float(data.get("price") or 0))
@@ -608,6 +895,8 @@ def admin_update_product(pid):
                 p["desc"] = (data.get("desc") or "").strip()
             if "swatch" in data:
                 p["swatch"] = int(data.get("swatch") or 0) % 6
+            if "hidden" in data:
+                p["hidden"] = bool(data.get("hidden"))
             if "images" in data:
                 images = sanitize_images(data.get("images"))
                 p["images"] = images
@@ -642,7 +931,20 @@ def admin_upload():
     if ext not in ALLOWED_IMAGE_EXT:
         abort(400, description="Недопустимый формат файла")
     filename = f"{uuid.uuid4().hex}{ext}"
-    file.save(os.path.join(UPLOAD_DIR, filename))
+    if USE_DB:
+        data = file.read()
+        conn = db_connect()
+        try:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO uploads (filename, content_type, data) VALUES (%s, %s, %s)",
+                        (filename, image_content_type(filename), psycopg2.Binary(data)),
+                    )
+        finally:
+            conn.close()
+    else:
+        file.save(os.path.join(UPLOAD_DIR, filename))
     return jsonify({"url": f"/uploads/{filename}"}), 201
 
 
@@ -754,6 +1056,131 @@ def admin_get_orders():
     orders = load_orders()
     orders.sort(key=lambda o: o.get("id", 0), reverse=True)
     return jsonify(orders)
+
+
+@app.route("/api/admin/customer-orders", methods=["GET"])
+def admin_customer_orders():
+    """CRM: вся история заказов клиента по Telegram ID или @username.
+
+    GET /api/admin/customer-orders?query=123456789
+    GET /api/admin/customer-orders?query=@username
+    Заголовок: X-Admin-Password.
+    """
+    require_admin()
+    raw_query = (request.args.get("query") or "").strip()
+    if not raw_query:
+        abort(400, description="Укажите Telegram ID или @username")
+
+    q_clean = raw_query.lstrip("@").strip()
+    if not q_clean:
+        abort(400, description="Укажите Telegram ID или @username")
+
+    orders = load_orders()
+
+    if not raw_query.startswith("@") and q_clean.lstrip("-").isdigit():
+        search_type = "telegram_id"
+        ids = {int(q_clean)}
+    else:
+        search_type = "username"
+        uname = normalize_username(q_clean)
+        # Находим ID по username, затем берём ВСЕ заказы этих ID —
+        # так не теряются заказы, сделанные до смены username.
+        ids = {
+            order_telegram_id(o)
+            for o in orders
+            if order_telegram_id(o) and normalize_username(order_username(o)) == uname
+        }
+
+    def belongs(o):
+        tid = order_telegram_id(o)
+        if tid and tid in ids:
+            return True
+        if search_type == "username":
+            return normalize_username(order_username(o)) == uname
+        return False
+
+    mine = [o for o in orders if belongs(o)]
+    mine.sort(key=lambda o: o.get("id", 0), reverse=True)
+
+    result_orders = []
+    for o in mine:
+        items = []
+        for it in o.get("items") or []:
+            try:
+                qty = int(it.get("qty") or 1)
+            except (TypeError, ValueError):
+                qty = 1
+            try:
+                price = int(it.get("price") or 0)
+            except (TypeError, ValueError):
+                price = 0
+            items.append({
+                "id": it.get("id"),
+                "name": it.get("name"),
+                "size": it.get("size"),
+                "qty": qty,
+                "price": price,
+                "sum": price * qty,
+            })
+        method = o.get("delivery_method")
+        result_orders.append({
+            "id": o.get("id"),
+            "number": f"BRO-{o.get('id')}",
+            "created_at": o.get("created_at"),
+            "status": o.get("status"),
+            "items": items,
+            "items_count": sum(i["qty"] for i in items),
+            "delivery_method": method,
+            "delivery_label": DELIVERY_LABELS.get(method, "Не указан"),
+            "subtotal": o.get("subtotal"),
+            "discount": o.get("discount") or 0,
+            "promo_code": o.get("promo_code"),
+            "total": int(o.get("total") or 0),
+            "name": o.get("name"),
+            "phone": o.get("phone"),
+            "comment": o.get("comment"),
+        })
+
+    active = [o for o in result_orders if o["status"] != "cancelled"]
+    total_amount = sum(o["total"] for o in result_orders)
+    active_amount = sum(o["total"] for o in active)
+    dates = sorted(o["created_at"] for o in result_orders if o.get("created_at"))
+
+    # Данные клиента: последние известные username / имя / телефон
+    latest_username = next((order_username(o) for o in mine if order_username(o)), None)
+    latest_id = next((order_telegram_id(o) for o in mine if order_telegram_id(o)), None)
+
+    def uniq(values):
+        seen, out = set(), []
+        for v in values:
+            if v and v not in seen:
+                seen.add(v)
+                out.append(v)
+        return out
+
+    return jsonify({
+        "query": raw_query,
+        "search_type": search_type,
+        "found": bool(mine),
+        "customer": {
+            "telegram_id": latest_id,
+            "username": latest_username,
+            "usernames": uniq(order_username(o) for o in mine),
+            "names": uniq(o.get("name") for o in mine),
+            "phones": uniq(o.get("phone") for o in mine),
+        },
+        "stats": {
+            "orders_count": len(result_orders),
+            "total_amount": total_amount,
+            "cancelled_count": len(result_orders) - len(active),
+            "active_orders_count": len(active),
+            "total_amount_without_cancelled": active_amount,
+            "average_order": int(round(active_amount / len(active))) if active else 0,
+            "first_order_at": dates[0] if dates else None,
+            "last_order_at": dates[-1] if dates else None,
+        },
+        "orders": result_orders,
+    })
 
 
 @app.route("/api/admin/orders/<int:oid>/status", methods=["PUT"])
@@ -877,6 +1304,56 @@ def setup_webhook():
     bot.set_webhook(url=url)
     log.info("Webhook установлен: %s", url)
 
+
+# Раньше в поле «категория» лежали бренды (Elf Bar, Geek Vape ...). Один раз
+# переносим их в новое поле «бренд», а категорию делаем общей — «Девайсы».
+KNOWN_BRAND_CATEGORIES = {"Elf Bar", "Geek Vape", "Vaporesso", "Smoant", "Voopoo", "Lost Vape", "Rincoe"}
+DEFAULT_DEVICE_CATEGORY = "Девайсы"
+
+
+def migrate_brand_field():
+    items = load_products()
+    changed = False
+    for p in items:
+        if "brand" in p:
+            continue
+        cat = (p.get("category") or "").strip()
+        if cat in KNOWN_BRAND_CATEGORIES:
+            p["brand"] = cat
+            p["category"] = DEFAULT_DEVICE_CATEGORY
+        else:
+            p["brand"] = ""
+        changed = True
+    if changed:
+        save_products(items)
+        log.info("Товары: добавлено поле brand (миграция)")
+
+
+def migrate_order_identity():
+    """Старым заказам добавляем поля telegram_id / username (копия прежних
+    customer_chat_id / customer_username), чтобы CRM-поиск видел всю историю."""
+    orders = load_orders()
+    changed = False
+    for o in orders:
+        if "telegram_id" in o and "username" in o:
+            continue
+        o["telegram_id"] = o.get("customer_chat_id")
+        o["username"] = clean_username(o.get("customer_username"))
+        o.setdefault("delivery_method", None)
+        changed = True
+    if changed:
+        save_orders(orders)
+        log.info("Заказы: добавлены поля telegram_id/username (миграция)")
+
+
+if USE_DB:
+    init_db()
+    log.info("Хранилище: Neon (Postgres)")
+else:
+    log.warning("DATABASE_URL не задан — данные хранятся в JSON-файлах и пропадут при редеплое на Render.")
+
+migrate_brand_field()
+migrate_order_identity()
 
 setup_webhook()
 
