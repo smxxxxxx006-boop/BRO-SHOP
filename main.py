@@ -432,14 +432,14 @@ def cmd_start(message: types.Message):
     if not BASE_URL:
         bot.send_message(
             message.chat.id,
-            "BRO: мини-апп ещё не сконфигурирован (не задан WEBHOOK_URL)."
+            "KOSHELEV: мини-апп ещё не сконфигурирован (не задан WEBHOOK_URL)."
         )
         return
 
     keyboard = types.InlineKeyboardMarkup()
     keyboard.add(
         types.InlineKeyboardButton(
-            text="👑 Открыть BRO",
+            text="👑 Открыть KOSHELEV",
             web_app=types.WebAppInfo(url=BASE_URL + "/")
         )
     )
@@ -463,7 +463,7 @@ def cmd_start(message: types.Message):
 
     bot.send_message(
         message.chat.id,
-        "👑 *BRO — вейп-шоп*\n\n"
+        "👑 *KOSHELEV — вейп-шоп*\n\n"
         "*Зашёл → выбрал → забрал.*\n"
         "Низкие цены, только оригинал, гарантия на покупку. "
         "Самовывоз и доставка по Москве день в день, без предоплаты.\n\n"
@@ -609,7 +609,7 @@ def create_order():
             bot.send_message(
                 customer_chat_id,
                 "✅ Заказ оформлен!\n\n"
-                f"Номер заказа: BRO-{new_id}\n"
+                f"Номер заказа: KOSHELEV-{new_id}\n"
                 f"{items_lines}\n\n"
                 f"{discount_line}"
                 f"Итого: {fmt_price(total)}\n\n"
@@ -623,7 +623,7 @@ def create_order():
     buyer_username_label = f"@{customer_username}" if customer_username else "Юзернейм не указан"
 
     admin_text = (
-        f"🛒 Новый заказ BRO-{new_id}\n\n"
+        f"🛒 Новый заказ KOSHELEV-{new_id}\n\n"
         f"Клиент: {name}\n"
         f"Телефон: {phone}\n"
         f"Покупатель: {buyer_id_label} | {buyer_username_label}\n"
@@ -721,7 +721,7 @@ def customer_cancel_order(oid):
 
     for admin_id in ADMIN_CHAT_IDS:
         try:
-            bot.send_message(admin_id, f"❌ Клиент отменил заказ BRO-{oid}")
+            bot.send_message(admin_id, f"❌ Клиент отменил заказ KOSHELEV-{oid}")
         except Exception as e:
             log.warning("Не удалось уведомить администратора %s: %s", admin_id, e)
 
@@ -1125,7 +1125,7 @@ def admin_customer_orders():
         method = o.get("delivery_method")
         result_orders.append({
             "id": o.get("id"),
-            "number": f"BRO-{o.get('id')}",
+            "number": f"KOSHELEV-{o.get('id')}",
             "created_at": o.get("created_at"),
             "status": o.get("status"),
             "items": items,
@@ -1219,7 +1219,7 @@ def admin_message_customer(oid):
     try:
         bot.send_message(
             chat_id,
-            f"💬 Сообщение от BRO по заказу BRO-{oid}:\n\n{text}"
+            f"💬 Сообщение от KOSHELEV по заказу KOSHELEV-{oid}:\n\n{text}"
         )
     except Exception as e:
         abort(400, description=f"Не удалось отправить сообщение: {e}")
@@ -1262,7 +1262,7 @@ def admin_message_question(qid):
     try:
         bot.send_message(
             chat_id,
-            f"💬 Ответ от BRO по товару «{q.get('product_name','')}»:\n\n{text}"
+            f"💬 Ответ от KOSHELEV по товару «{q.get('product_name','')}»:\n\n{text}"
         )
     except Exception as e:
         abort(400, description=f"Не удалось отправить ответ: {e}")
