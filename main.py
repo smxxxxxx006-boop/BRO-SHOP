@@ -25,7 +25,7 @@ if not BOT_TOKEN:
 BASE_URL = (os.environ.get("WEBHOOK_URL") or os.environ.get("RENDER_EXTERNAL_URL") or "").rstrip("/")
 
 # Telegram-аккаунт менеджера (без @) — на него ведёт кнопка «Написать менеджеру».
-SHOP_CONTACT = (os.environ.get("SHOP_CONTACT") or "trushnyibro").lstrip("@").strip()
+SHOP_CONTACT = "topvapemanager"  # Telegram-аккаунт менеджера (без @), зашит в код
 
 # Пароль для входа в админ-панель (/admin). Задаётся в переменных окружения.
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")

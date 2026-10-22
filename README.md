@@ -65,7 +65,6 @@ render.yaml       — опциональный blueprint для Render
    - `BOT_TOKEN` — токен из BotFather
    - `ADMIN_PASSWORD` — пароль для входа в админ-панель
    - `ADMIN_CHAT_ID` — ваш Telegram ID (узнать: [@userinfobot](https://t.me/userinfobot)); можно несколько через запятую: `111111,222222`. Эти аккаунты получают уведомления о заказах и кнопку «Панель администратора» в `/start`
-   - `SHOP_CONTACT` — Telegram-аккаунт менеджера без `@` (по умолчанию `trushnyibro`); на него ведут кнопки «Написать менеджеру»
    - `WEBHOOK_URL` — необязательно; Render сам передаёт `RENDER_EXTERNAL_URL`
 4. После первого старта вебхук Telegram устанавливается автоматически.
 

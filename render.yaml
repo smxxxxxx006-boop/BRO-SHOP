@@ -16,8 +16,6 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
-      - key: SHOP_CONTACT
-        value: trushnyibro
     # Опционально: платный постоянный диск, чтобы товары и загруженные фото
     # не пропадали при рестарте/редеплое (см. README, раздел "Постоянное хранилище").
     # disk:
